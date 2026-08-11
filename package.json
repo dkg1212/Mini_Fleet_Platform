@@ -1,0 +1,11 @@
+{
+  "name": "mini-fleet-platform",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "test:server": "npm test --prefix server"
+  }
+}
+

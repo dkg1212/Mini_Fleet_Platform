@@ -1,0 +1,13 @@
+const RIDE_STATUSES = [
+  'REQUESTED',
+  'ACCEPTED',
+  'DRIVER_ARRIVING',
+  'STARTED',
+  'COMPLETED',
+  'CANCELLED'
+];
+
+module.exports = {
+  RIDE_STATUSES
+};
+
