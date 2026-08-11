@@ -72,13 +72,16 @@ function LoginPage() {
   };
 
   return (
-    <section className="auth-panel">
-      <div className="section-heading">
-        <h1>Login</h1>
-        <p>Use one of the seeded development accounts.</p>
+    <section className="mx-auto max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] sm:p-10">
+      <div className="mb-8 grid gap-3">
+        <div className="inline-flex w-fit items-center rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">
+          Sign in
+        </div>
+        <h1 className="text-3xl font-black tracking-tight text-slate-950">Login</h1>
+        <p className="text-sm leading-6 text-slate-600">Use one of the seeded development accounts.</p>
       </div>
 
-      <form className="form" onSubmit={handleSubmit}>
+      <form className="grid gap-5" onSubmit={handleSubmit}>
         <ErrorMessage message={submitError} />
         <Input
           id="email"
