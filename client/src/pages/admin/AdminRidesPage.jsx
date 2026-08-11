@@ -5,7 +5,6 @@ import EmptyState from '../../components/EmptyState';
 import ErrorMessage from '../../components/ErrorMessage';
 import LoadingState from '../../components/LoadingState';
 import StatusBadge from '../../components/StatusBadge';
-import { getAdminUsers } from '../../services/adminService';
 import { getRides } from '../../services/rideService';
 import { formatCurrency, formatDateTime } from '../../utils/format';
 
@@ -25,6 +24,34 @@ const getUserName = (userValue, fallback) => {
   }
 
   return typeof userValue === 'string' && userValue ? userValue : fallback;
+};
+
+const getUserId = (userValue) => {
+  if (userValue?._id || userValue?.id) {
+    return userValue._id || userValue.id;
+  }
+
+  return typeof userValue === 'string' ? userValue : '';
+};
+
+const getUniqueUsersFromRides = (rides, key) => {
+  const users = new Map();
+
+  rides.forEach((ride) => {
+    const userValue = ride[key];
+    const userId = getUserId(userValue);
+
+    if (!userId || !userValue?.name) {
+      return;
+    }
+
+    users.set(userId, {
+      id: userId,
+      name: userValue.name
+    });
+  });
+
+  return Array.from(users.values()).sort((first, second) => first.name.localeCompare(second.name));
 };
 
 const buildRideFilters = (filters) => {
@@ -53,26 +80,20 @@ function AdminRidesPage() {
   const [drivers, setDrivers] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterOptionsLoading, setFilterOptionsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filterOptionsError, setFilterOptionsError] = useState('');
 
   const rideFilters = useMemo(() => buildRideFilters(filters), [filters]);
 
   useEffect(() => {
     const loadFilterOptions = async () => {
       try {
-        const [driverData, customerData] = await Promise.all([
-          getAdminUsers('DRIVER'),
-          getAdminUsers('CUSTOMER')
-        ]);
+        const allRides = await getRides();
 
-        setDrivers(driverData);
-        setCustomers(customerData);
-      } catch (apiError) {
-        setFilterOptionsError(apiError.response?.data?.message || 'Could not load filter options.');
-      } finally {
-        setFilterOptionsLoading(false);
+        setDrivers(getUniqueUsersFromRides(allRides, 'driverId'));
+        setCustomers(getUniqueUsersFromRides(allRides, 'customerId'));
+      } catch (error) {
+        setDrivers([]);
+        setCustomers([]);
       }
     };
 
@@ -119,9 +140,6 @@ function AdminRidesPage() {
         </div>
         <Link to="/admin/dashboard">Back to dashboard</Link>
       </div>
-
-      <ErrorMessage message={filterOptionsError} />
-
       <form className="filter-bar" onSubmit={(event) => event.preventDefault()}>
         <div className="field">
           <label htmlFor="status">Status</label>
@@ -141,11 +159,10 @@ function AdminRidesPage() {
             className="input"
             value={filters.driver}
             onChange={handleFilterChange}
-            disabled={filterOptionsLoading}
           >
             <option value="">All drivers</option>
             {drivers.map((driver) => (
-              <option value={driver._id || driver.id} key={driver._id || driver.id}>{driver.name}</option>
+              <option value={driver.id} key={driver.id}>{driver.name}</option>
             ))}
           </select>
         </div>
@@ -158,11 +175,10 @@ function AdminRidesPage() {
             className="input"
             value={filters.customer}
             onChange={handleFilterChange}
-            disabled={filterOptionsLoading}
           >
             <option value="">All customers</option>
             {customers.map((customer) => (
-              <option value={customer._id || customer.id} key={customer._id || customer.id}>{customer.name}</option>
+              <option value={customer.id} key={customer.id}>{customer.name}</option>
             ))}
           </select>
         </div>

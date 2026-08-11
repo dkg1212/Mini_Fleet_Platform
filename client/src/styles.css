@@ -346,6 +346,39 @@ a {
   display: none;
 }
 
+.admin-users-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.admin-users-panel {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.user-list {
+  display: grid;
+  gap: 10px;
+}
+
+.user-list-item {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid #d9e2df;
+  border-radius: 8px;
+  background: #fafcfc;
+}
+
+.user-list-item span {
+  color: #52615d;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .admin-ride-card {
   display: grid;
   gap: 14px;
@@ -499,6 +532,7 @@ a {
 
   .two-column-form,
   .metric-strip,
+  .admin-users-grid,
   .details-grid,
   .ride-card {
     grid-template-columns: 1fr;

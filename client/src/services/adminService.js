@@ -5,11 +5,3 @@ export const getAdminMetrics = async () => {
 
   return response.data.data;
 };
-
-export const getAdminUsers = async (role) => {
-  const response = await api.get('/admin/users', {
-    params: role ? { role } : {}
-  });
-
-  return response.data.data.users;
-};
