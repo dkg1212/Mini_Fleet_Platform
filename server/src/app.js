@@ -11,9 +11,15 @@ const rideRoutes = require('./routes/rideRoutes');
 
 const app = express();
 
+const getClientOrigin = () => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+
+  return clientUrl.replace(/\/$/, '');
+};
+
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173'
+  origin: getClientOrigin()
 }));
 app.use(express.json());
 app.use(morgan('dev'));
