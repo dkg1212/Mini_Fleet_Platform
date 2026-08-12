@@ -10,7 +10,21 @@ const {
 const DUPLICATE_KEY_ERROR = 11000;
 const DRIVER_STATUS_UPDATES = ['DRIVER_ARRIVING', 'STARTED', 'COMPLETED'];
 
-const getId = (value) => value && value.toString();
+const getId = (value) => {
+  if (!value) {
+    return value;
+  }
+
+  if (value._id) {
+    return value._id.toString();
+  }
+
+  if (value.id) {
+    return value.id.toString();
+  }
+
+  return value.toString();
+};
 
 const createHistory = async ({ rideId, previousStatus, newStatus, changedBy }) => {
   await RideHistory.create({
@@ -157,28 +171,35 @@ const listAssignedRides = async (user) => {
     .sort({ createdAt: -1 });
 };
 
-const getRideById = async ({ rideId, user }) => {
+const findRideById = async (rideId, { populate = false } = {}) => {
   const query = Ride.findById(rideId);
-  const ride = typeof query.populate === 'function'
-    ? await query
+
+  if (populate && typeof query.populate === 'function') {
+    return query
       .populate('customerId', 'name email role')
-      .populate('driverId', 'name email role')
-    : await query;
+      .populate('driverId', 'name email role');
+  }
+
+  return query;
+};
+
+const getRideById = async ({ rideId, user }) => {
+  const ride = await findRideById(rideId);
 
   if (!ride) {
     throw new AppError(404, 'Ride not found');
   }
 
   if (user.role === 'ADMIN') {
-    return ride;
+    return findRideById(rideId, { populate: true });
   }
 
   if (user.role === 'CUSTOMER' && getId(ride.customerId) === user.id) {
-    return ride;
+    return findRideById(rideId, { populate: true });
   }
 
   if (user.role === 'DRIVER' && ride.driverId && getId(ride.driverId) === user.id) {
-    return ride;
+    return findRideById(rideId, { populate: true });
   }
 
   throw new AppError(403, 'You are not authorized to access this ride');

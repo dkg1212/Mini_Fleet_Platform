@@ -1,12 +1,27 @@
 # Mini Fleet Booking and Tracking Platform
 
-Take-home assignment project for a small fleet booking and tracking platform.
+Small full-stack assignment project for booking, accepting, tracking, and monitoring fleet rides.
+
+## Problem Overview
+
+The platform supports three roles:
+
+- Customers can log in, create ride requests, view their bookings, track status/history, and cancel before the ride starts.
+- Drivers can log in, view available rides, accept one ride, view assigned rides, and move the ride through the supported lifecycle.
+- Administrators can view all rides, filter bookings, and monitor operational metrics.
+
+## Technology Stack
+
+- Frontend: React, Vite, React Router, Axios, CSS
+- Backend: Node.js, Express, Mongoose, Zod, JWT, bcrypt
+- Database: MongoDB
+- Tests: Jest
 
 ## Project Structure
 
 - `client/` - React + Vite frontend
-- `server/` - Node.js + Express backend
-- `docs/` - Project documentation
+- `server/` - Express API
+- `docs/` - API documentation, architecture notes, assumptions, limitations, and presentation notes
 
 ## Setup
 
@@ -24,12 +39,28 @@ cp client/.env.example client/.env
 cp server/.env.example server/.env
 ```
 
-## Scripts
+Start MongoDB locally and set `server/.env`:
 
-Run the frontend:
+```env
+MONGO_URI=mongodb://127.0.0.1:27017/mini-fleet-platform
+JWT_SECRET=replace-with-a-long-random-development-secret
+JWT_EXPIRES_IN=1d
+PORT=5001
+HOST=127.0.0.1
+```
+
+Set the frontend API URL in `client/.env`:
+
+```env
+VITE_API_URL=http://localhost:5001/api
+```
+
+## Run The App
+
+Seed development users:
 
 ```bash
-npm run dev:client
+npm run seed --prefix server
 ```
 
 Run the backend:
@@ -38,322 +69,101 @@ Run the backend:
 npm run dev:server
 ```
 
-Run backend tests:
+Run the frontend:
+
+```bash
+npm run dev:client
+```
+
+The frontend runs on the Vite URL printed in the terminal, usually `http://localhost:5173`.
+
+## Test Users
+
+Seed data creates these local users:
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Customer | `customer@example.com` | `Customer@123` |
+| Driver | `driver1@example.com` | `Driver@123` |
+| Driver | `driver2@example.com` | `Driver@123` |
+| Administrator | `admin@example.com` | `Admin@123` |
+
+These are local development credentials only.
+
+## Run Tests
 
 ```bash
 npm run test:server
 ```
 
-Seed development users:
+The backend test suite covers booking creation, validation failures, role authorization, duplicate ride acceptance, invalid status transitions, ownership checks, token failures, and completed-ride revenue.
 
-```bash
-npm run seed --prefix server
+## API Documentation
+
+Required APIs are implemented:
+
+- `POST /api/auth/login`
+- `POST /api/rides`
+- `GET /api/rides`
+- `GET /api/rides/:id`
+- `POST /api/rides/:id/accept`
+- `PATCH /api/rides/:id/status`
+- `POST /api/rides/:id/cancel`
+- `GET /api/admin/metrics`
+
+Additional supporting APIs:
+
+- `GET /api/rides/available`
+- `GET /api/rides/assigned`
+- `GET /api/rides/:id/history`
+- `GET /api/admin/users`
+- `GET /api/health`
+
+Full request/response details are in [docs/API.md](docs/API.md).
+
+## Architecture
+
+```text
+Frontend
+   |
+   v
+REST API Layer
+   |
+   v
+Business Logic / Services
+   |
+   v
+MongoDB
 ```
 
-## Health Check
+More detail, including indexes and lifecycle rules, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-```http
-GET /api/health
+## Core Business Rules
+
+Primary ride lifecycle:
+
+```text
+REQUESTED -> ACCEPTED -> DRIVER_ARRIVING -> STARTED -> COMPLETED
 ```
 
-Response:
+Cancellation is allowed from:
 
-```json
-{
-  "success": true,
-  "message": "Fleet API is running"
-}
+```text
+REQUESTED, ACCEPTED, DRIVER_ARRIVING
 ```
 
-## Ride Business Rules
+Cancellation is rejected from:
 
-Ride cancellation assumption: a ride is considered started only when its status is `STARTED`.
-Customers may cancel rides in `REQUESTED`, `ACCEPTED`, or `DRIVER_ARRIVING`.
-Rides cannot be cancelled from `STARTED`, `COMPLETED`, or `CANCELLED`.
-
-## Customer Ride APIs
-
-All ride endpoints require:
-
-```http
-Authorization: Bearer <jwt>
+```text
+STARTED, COMPLETED, CANCELLED
 ```
 
-Create a ride:
+The backend prevents invalid transitions, duplicate ride acceptance, unauthorized status updates, unauthorized ride access, and repeated customer booking creation when the same idempotency key is reused.
 
-```http
-POST /api/rides
-Idempotency-Key: unique-value
-Content-Type: application/json
-```
+## Assumptions And Known Limitations
 
-```json
-{
-  "pickup": "Tezpur University",
-  "destination": "Tezpur Airport",
-  "estimatedDistance": 12,
-  "requestedTime": "2026-08-12T10:30:00.000Z",
-  "notes": "Please call when arriving"
-}
-```
+Assumptions, known limitations, optional features not completed, and the AI tool usage note are documented in [docs/ASSUMPTIONS_AND_LIMITATIONS.md](docs/ASSUMPTIONS_AND_LIMITATIONS.md).
 
-Response:
+## Demo And Presentation
 
-```json
-{
-  "success": true,
-  "message": "Ride created successfully",
-  "data": {
-    "ride": {
-      "bookingId": "FLT-20260812-ABCD",
-      "customerId": "authenticated-customer-id",
-      "driverId": null,
-      "pickup": "Tezpur University",
-      "destination": "Tezpur Airport",
-      "estimatedDistance": 12,
-      "estimatedFare": 280,
-      "status": "REQUESTED",
-      "requestedTime": "2026-08-12T10:30:00.000Z"
-    }
-  }
-}
-```
-
-List current user's rides:
-
-```http
-GET /api/rides
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "message": "Rides retrieved successfully",
-  "data": {
-    "rides": []
-  }
-}
-```
-
-Get one ride:
-
-```http
-GET /api/rides/:id
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "message": "Ride retrieved successfully",
-  "data": {
-    "ride": {
-      "id": "ride-id",
-      "bookingId": "FLT-20260812-ABCD",
-      "status": "REQUESTED"
-    }
-  }
-}
-```
-
-Cancel a ride:
-
-```http
-POST /api/rides/:id/cancel
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "message": "Ride cancelled successfully",
-  "data": {
-    "ride": {
-      "status": "CANCELLED"
-    }
-  }
-}
-```
-
-Repeated create request with the same `Idempotency-Key` returns the existing ride with `200 OK`:
-
-```json
-{
-  "success": true,
-  "message": "Ride already exists for this idempotency key",
-  "data": {
-    "ride": {
-      "bookingId": "FLT-20260812-ABCD",
-      "status": "REQUESTED"
-    }
-  }
-}
-```
-
-## Driver Ride APIs
-
-List assigned rides through the required endpoint:
-
-```http
-GET /api/rides
-Authorization: Bearer <driver-jwt>
-```
-
-List available requested rides:
-
-```http
-GET /api/rides/available
-Authorization: Bearer <driver-jwt>
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "message": "Available rides retrieved successfully",
-  "data": {
-    "rides": [
-      {
-        "bookingId": "FLT-20260812-ABCD",
-        "pickup": "Tezpur University",
-        "destination": "Tezpur Airport",
-        "requestedTime": "2026-08-12T10:30:00.000Z",
-        "estimatedFare": 280,
-        "customerId": {
-          "name": "Customer User"
-        }
-      }
-    ]
-  }
-}
-```
-
-Accept a ride:
-
-```http
-POST /api/rides/:id/accept
-Authorization: Bearer <driver-jwt>
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "message": "Ride accepted successfully",
-  "data": {
-    "ride": {
-      "driverId": "authenticated-driver-id",
-      "status": "ACCEPTED"
-    }
-  }
-}
-```
-
-If another driver already accepted it:
-
-```json
-{
-  "success": false,
-  "message": "Ride is no longer available."
-}
-```
-
-Update assigned ride status:
-
-```http
-PATCH /api/rides/:id/status
-Authorization: Bearer <driver-jwt>
-Content-Type: application/json
-```
-
-```json
-{
-  "status": "DRIVER_ARRIVING"
-}
-```
-
-## Admin APIs
-
-Admin metrics:
-
-```http
-GET /api/admin/metrics
-Authorization: Bearer <admin-jwt>
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "data": {
-    "totalRides": 0,
-    "requestedRides": 0,
-    "activeRides": 0,
-    "completedRides": 0,
-    "cancelledRides": 0,
-    "completedRevenue": 0
-  }
-}
-```
-
-Admin ride list with filters:
-
-```http
-GET /api/rides?status=COMPLETED
-GET /api/rides?driver=DRIVER_ID
-GET /api/rides?customer=CUSTOMER_ID
-GET /api/rides?dateFrom=2026-08-01&dateTo=2026-08-12
-Authorization: Bearer <admin-jwt>
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "message": "Rides retrieved successfully",
-  "data": {
-    "rides": [
-      {
-        "bookingId": "FLT-20260812-ABCD",
-        "customerId": {
-          "name": "Customer User",
-          "email": "customer@example.com",
-          "role": "CUSTOMER"
-        },
-        "driverId": {
-          "name": "Driver One",
-          "email": "driver1@example.com",
-          "role": "DRIVER"
-        },
-        "pickup": "Tezpur University",
-        "destination": "Tezpur Airport",
-        "requestedTime": "2026-08-12T10:30:00.000Z",
-        "estimatedFare": 280,
-        "status": "COMPLETED"
-      }
-    ]
-  }
-}
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "message": "Ride status updated successfully",
-  "data": {
-    "ride": {
-      "status": "DRIVER_ARRIVING"
-    }
-  }
-}
-```
+This repository is ready for a local live demo after setup and seeding. A suggested 15-20 minute presentation flow is available in [docs/PRESENTATION_NOTES.md](docs/PRESENTATION_NOTES.md).

@@ -159,6 +159,63 @@ describe('rideService customer ride APIs', () => {
     expect(sort).toHaveBeenCalledWith({ createdAt: 1 });
   });
 
+  it('customer can access own populated ride details', async () => {
+    const ride = buildRide({
+      customerId: {
+        _id: customerId,
+        name: 'Customer User',
+        email: 'customer@example.com',
+        role: 'CUSTOMER'
+      }
+    });
+
+    Ride.findById.mockResolvedValue(ride);
+
+    const result = await rideService.getRideById({
+      rideId: ride._id,
+      user: {
+        id: customerId,
+        role: 'CUSTOMER'
+      }
+    });
+
+    expect(result).toBe(ride);
+  });
+
+  it('customer can see own populated ride history', async () => {
+    const ride = buildRide({
+      customerId: {
+        _id: customerId,
+        name: 'Customer User',
+        email: 'customer@example.com',
+        role: 'CUSTOMER'
+      }
+    });
+    const history = [
+      {
+        rideId: ride._id,
+        previousStatus: 'REQUESTED',
+        newStatus: 'ACCEPTED',
+        changedBy: driverOneId
+      }
+    ];
+    const sort = jest.fn().mockResolvedValue(history);
+
+    Ride.findById.mockResolvedValue(ride);
+    RideHistory.find.mockReturnValue({ sort });
+
+    const result = await rideService.getRideHistory({
+      rideId: ride._id,
+      user: {
+        id: customerId,
+        role: 'CUSTOMER'
+      }
+    });
+
+    expect(result).toEqual(history);
+    expect(RideHistory.find).toHaveBeenCalledWith({ rideId: ride._id });
+  });
+
   it('customer cannot see another customer ride history', async () => {
     Ride.findById.mockResolvedValue(buildRide({ customerId: otherCustomerId }));
 
@@ -412,6 +469,30 @@ describe('rideService driver ride APIs', () => {
       newStatus: 'DRIVER_ARRIVING',
       changedBy: driverOneId
     });
+  });
+
+  it('assigned driver can access populated ride details', async () => {
+    const ride = buildRide({
+      driverId: {
+        _id: driverOneId,
+        name: 'Driver One',
+        email: 'driver1@example.com',
+        role: 'DRIVER'
+      },
+      status: 'ACCEPTED'
+    });
+
+    Ride.findById.mockResolvedValue(ride);
+
+    const result = await rideService.getRideById({
+      rideId: ride._id,
+      user: {
+        id: driverOneId,
+        role: 'DRIVER'
+      }
+    });
+
+    expect(result).toBe(ride);
   });
 
   it('another driver cannot update that ride', async () => {
